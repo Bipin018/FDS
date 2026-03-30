@@ -39,6 +39,7 @@ def run_simulations_b(
     _model_b,
     _fixtures_a: pd.DataFrame,
     _train_odds: pd.DataFrame,
+    _test_fixtures_with_odds: pd.DataFrame,
     _h2h_table: pd.DataFrame,
     _champ_fallback: dict,
     _promoted_teams: set,
@@ -48,23 +49,31 @@ def run_simulations_b(
 ) -> pd.DataFrame:
     """
     Pre-compute Model B expected goals per fixture (using per-fixture
-    implied_prob_home from training-set median), then simulate.
+    implied_prob_home from test set when available, else fallback to median).
     """
     if _model_b is None:
         return None
 
-    # Use median implied_prob_home from training data as a proxy for
-    # "current market" when per-fixture odds are unavailable in test set
+    # Fallback: median implied_prob_home from training data
     median_imp = float(_train_odds["implied_prob_home"].median())
+
+    # Build fixture-specific odds lookup from test set
+    imp_map = {}
+    if "implied_prob_home" in _test_fixtures_with_odds.columns:
+        tmp = _test_fixtures_with_odds[["HomeTeam", "AwayTeam", "implied_prob_home"]].dropna()
+        imp_map = {(r.HomeTeam, r.AwayTeam): float(r.implied_prob_home) for r in tmp.itertuples(index=False)}
 
     fixtures_b = _fixtures_a.copy()
     mu_home_b, mu_away_b = [], []
     for _, row in fixtures_b.iterrows():
         ht = row["HomeTeam"]
         at = row["AwayTeam"]
+        
+        # Use fixture-specific odds if available, else fallback to median
+        imp = imp_map.get((ht, at), median_imp)
 
         try:
-            mh, ma = predict_base_goals_b(_model_b, ht, at, median_imp)
+            mh, ma = predict_base_goals_b(_model_b, ht, at, imp)
         except Exception:
             # Promoted / unseen team for Model B → fall back to Model A mu
             mh, ma = float(row["mu_home"]), float(row["mu_away"])
@@ -200,10 +209,21 @@ use_model_b = model_choice.startswith("Model B")
 
 # Run simulations
 if use_model_b and model_b.get("model_b") is not None:
+    # Prepare test fixtures with odds
+    from src.model_b import detect_odds_provider, ODDS_PROVIDERS
+    
+    test_fixtures = data["test_df"].copy()
+    provider = detect_odds_provider(test_fixtures)
+    if provider is not None:
+        h_col, d_col, a_col = ODDS_PROVIDERS[provider]
+        mask = test_fixtures[[h_col, d_col, a_col]].notna().all(axis=1)
+        test_fixtures.loc[mask, :] = extract_implied_probs(test_fixtures.loc[mask, :], provider=provider)
+    
     table = run_simulations_b(
         model_b["model_b"],
         model_a["fixtures"],
         model_b["train_odds"],
+        test_fixtures,
         data["h2h_table"],
         data["champ_fallback"],
         model_a["promoted_teams"],
