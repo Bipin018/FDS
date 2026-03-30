@@ -23,6 +23,7 @@ from src.simulator  import simulate_season, build_predicted_table
 from src.evaluator  import compare_models
 from src.model_b    import predict_base_goals_b
 from src.ui import season_banner
+from src.model_b import detect_odds_provider, extract_implied_probs, ODDS_PROVIDERS
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
@@ -49,24 +50,43 @@ def _run_model_a(_fixtures: pd.DataFrame) -> pd.DataFrame:
 
 
 @st.cache_data(show_spinner="Running Model B validation simulations…")
-def _run_model_b(_model_b, _fixtures_a: pd.DataFrame,
-                 _train_odds: pd.DataFrame) -> pd.DataFrame | None:
+def _run_model_b(
+    _model_b,
+    _fixtures_a: pd.DataFrame,
+    _train_odds: pd.DataFrame,
+    _test_df_with_probs: pd.DataFrame,
+) -> pd.DataFrame | None:
     if _model_b is None:
         return None
+
+    # fallback when fixture odds missing
     median_imp = float(_train_odds["implied_prob_home"].median())
+
     fixtures_b = _fixtures_a.copy()
+
+    # map (HomeTeam, AwayTeam) -> implied_prob_home from test season when available
+    imp_map = {}
+    if "implied_prob_home" in _test_df_with_probs.columns:
+        tmp = _test_df_with_probs[["HomeTeam", "AwayTeam", "implied_prob_home"]].dropna()
+        imp_map = {(r.HomeTeam, r.AwayTeam): float(r.implied_prob_home) for r in tmp.itertuples(index=False)}
+
     mu_h_list, mu_a_list = [], []
     for _, row in fixtures_b.iterrows():
         ht = row["HomeTeam"]
         at = row["AwayTeam"]
+        imp = imp_map.get((ht, at), median_imp)
+
         try:
-            mh, ma = predict_base_goals_b(_model_b, ht, at, median_imp)
+            mh, ma = predict_base_goals_b(_model_b, ht, at, imp)
         except Exception:
             mh, ma = float(row["mu_home"]), float(row["mu_away"])
+
         mu_h_list.append(mh)
         mu_a_list.append(ma)
+
     fixtures_b["mu_home"] = mu_h_list
     fixtures_b["mu_away"] = mu_a_list
+
     sim_df = simulate_season(fixtures_b, n_simulations=1000)
     return build_predicted_table(sim_df)
 
@@ -155,7 +175,23 @@ def _grouped_bar_chart(
     )
     return fig
 
+def _add_test_implied_probs(test_df: pd.DataFrame) -> tuple[pd.DataFrame, str | None]:
+    """
+    Add implied probabilities to test_df using whichever odds provider is available.
+    Returns (df_with_probs, provider).
+    If no provider available, returns (original df, None).
+    """
+    df = test_df.copy()
+    provider = detect_odds_provider(df)
+    if provider is None:
+        return df, None
 
+    h_col, d_col, a_col = ODDS_PROVIDERS[provider]
+
+    # Compute implied probs only where all 3 odds exist
+    mask = df[[h_col, d_col, a_col]].notna().all(axis=1)
+    df.loc[mask, :] = extract_implied_probs(df.loc[mask, :], provider=provider)
+    return df, provider
 # ---------------------------------------------------------------------------
 # Page layout
 # ---------------------------------------------------------------------------
@@ -171,32 +207,33 @@ if "model_a" not in st.session_state or "data" not in st.session_state:
 model_a_state = st.session_state["model_a"]
 model_b_state = st.session_state["model_b"]
 data          = st.session_state["data"]
-
+test_fixtures_raw = data["test_df"].copy()
+test_fixtures, test_odds_provider = _add_test_implied_probs(test_fixtures_raw)
 actual_table = _build_actual_table()
 
 pred_a = _run_model_a(model_a_state["fixtures"])
 pred_b = None
 if model_b_state.get("model_b") is not None:
     pred_b = _run_model_b(
-        model_b_state["model_b"],
-        model_a_state["fixtures"],
-        model_b_state["train_odds"],
-    )
+    model_b_state["model_b"],
+    model_a_state["fixtures"],
+    model_b_state["train_odds"],
+    test_fixtures,
+)
 
 # ── Metrics table ────────────────────────────────────────────────────────
 st.subheader("Evaluation Metrics")
 
-test_fixtures = data["test_df"].copy()
-
 model_a_results = {
     "predicted_table": pred_a,
     "model":           model_a_state["model_a"],
-    "fixtures":        test_fixtures,
+    "fixtures":        test_fixtures_raw,   # or test_fixtures; either is fine for A
 }
+
 model_b_results = {
     "predicted_table": pred_b if pred_b is not None else pred_a,
     "model":           model_b_state.get("model_b") or model_a_state["model_a"],
-    "fixtures":        test_fixtures,
+    "fixtures":        test_fixtures,       # IMPORTANT: includes implied_prob_home when available
 }
 
 with st.spinner("Computing metrics…"):
