@@ -21,6 +21,7 @@ if str(ROOT) not in sys.path:
 from src.simulator import simulate_season, build_predicted_table
 from src.model_b   import predict_base_goals_b, extract_implied_probs
 from src.model     import precompute_expected_goals
+from app.app       import season_banner
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -172,7 +173,7 @@ def _points_bar_chart(table: pd.DataFrame, title: str) -> go.Figure:
 
 st.set_page_config(page_title="Predicted League Table", page_icon="⚽", layout="wide")
 st.title("⚽ Predicted League Table")
-st.caption("1 000 Monte Carlo simulations · Poisson GLM")
+season_banner()
 
 # Guard: ensure session state is populated
 if "data" not in st.session_state or "model_a" not in st.session_state:

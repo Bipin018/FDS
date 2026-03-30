@@ -257,7 +257,28 @@ def _render_sidebar() -> None:
 # ---------------------------------------------------------------------------
 # Home / landing page
 # ---------------------------------------------------------------------------
+# ---------------------------------------------------------------------------
+# Shared page banner helper
+# ---------------------------------------------------------------------------
 
+def season_banner() -> None:
+    """
+    Render a consistent info banner at the top of every page showing
+    exactly which season is being predicted and what data trained the model.
+    """
+    if "data" not in st.session_state:
+        return
+    data          = st.session_state["data"]
+    target        = format_season(data["target_season"])
+    train_seasons = [format_season(s) for s in PL_SEASONS[:-1]]
+    first_train   = train_seasons[0]
+    last_train    = train_seasons[-1]
+
+    st.info(
+        f"🔮 **Predicting season: {target}**  ·  "
+        f"Model trained on: {first_train} → {last_train}  ·  "
+        f"1 000 Monte Carlo simulations per run"
+    )
 def _render_home() -> None:
     """Render the app landing page shown at the root URL."""
     st.title("⚽ Premier League Season Predictor")

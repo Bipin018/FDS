@@ -21,7 +21,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from src.simulator import simulate_season
-
+from app.app       import season_banner
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
@@ -94,6 +94,7 @@ def _probability_matrix(sim_df: pd.DataFrame, teams: list[str]) -> pd.DataFrame:
 
 st.set_page_config(page_title="Points Distribution", page_icon="📊", layout="wide")
 st.title("📊 Points Distribution")
+season_banner()
 st.caption("Select 2–6 teams to compare their simulated points distributions.")
 
 if "model_a" not in st.session_state:

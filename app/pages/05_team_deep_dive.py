@@ -23,7 +23,7 @@ if str(ROOT) not in sys.path:
 from src.simulator import simulate_season
 from src.form      import seed_form_window, compute_form_multiplier
 from src.downloader import PL_SEASONS
-
+from app.app        import season_banner
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
@@ -178,6 +178,7 @@ def _h2h_full_table(pl_df: pd.DataFrame, team: str) -> pd.DataFrame:
 
 st.set_page_config(page_title="Team Deep Dive", page_icon="🔍", layout="wide")
 st.title("🔍 Team Deep Dive")
+season_banner()
 
 if "model_a" not in st.session_state or "data" not in st.session_state:
     st.warning("Please launch the app from `app/app.py` so data loads correctly.")

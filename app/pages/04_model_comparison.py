@@ -22,7 +22,7 @@ if str(ROOT) not in sys.path:
 from src.simulator  import simulate_season, build_predicted_table
 from src.evaluator  import compare_models
 from src.model_b    import predict_base_goals_b
-
+from app.app        import season_banner
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
@@ -159,7 +159,7 @@ def _grouped_bar_chart(
 
 st.set_page_config(page_title="Model Comparison", page_icon="🔬", layout="wide")
 st.title("🔬 Model A vs Model B — Comparison")
-st.caption("Validation on 2024/25 season · MAE | Log-Loss | Rank Accuracy ±2")
+season_banner()
 
 if "model_a" not in st.session_state or "data" not in st.session_state:
     st.warning("Please launch the app from `app/app.py` so data loads correctly.")

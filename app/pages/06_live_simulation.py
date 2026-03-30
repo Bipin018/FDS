@@ -20,7 +20,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from src.simulator import simulate_once
-
+from app.app       import season_banner
 # ---------------------------------------------------------------------------
 # Colour helpers
 # ---------------------------------------------------------------------------
@@ -67,6 +67,7 @@ def _style_live_table(
 
 st.set_page_config(page_title="Live Simulation", page_icon="▶️", layout="wide")
 st.title("▶️ Live Season Simulation")
+season_banner()
 st.caption(
     "Every press of the button is a brand-new universe. "
     "Watch 380 fixtures resolve one matchday at a time."

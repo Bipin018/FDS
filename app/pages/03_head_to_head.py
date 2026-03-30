@@ -26,7 +26,7 @@ if str(ROOT) not in sys.path:
 from src.model       import predict_base_goals
 from src.form        import compute_form_multiplier, seed_form_window
 from src.downloader  import PL_SEASONS
-
+from app.app         import season_banner
 # ---------------------------------------------------------------------------
 # Simulation helpers
 # ---------------------------------------------------------------------------
@@ -181,6 +181,7 @@ def _h2h_record(pl_df: pd.DataFrame,
 
 st.set_page_config(page_title="Head to Head", page_icon="⚔️", layout="wide")
 st.title("⚔️ Head to Head Simulation")
+season_banner()
 st.caption(f"Simulate any fixture {N_SIMS:,} times · Form-adjusted Poisson GLM · No betting data")
 
 if "model_a" not in st.session_state or "data" not in st.session_state:
