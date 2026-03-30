@@ -20,7 +20,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from src.simulator import simulate_once
-from app.app       import season_banner
+from src.ui import season_banner
 # ---------------------------------------------------------------------------
 # Colour helpers
 # ---------------------------------------------------------------------------

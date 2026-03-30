@@ -23,7 +23,7 @@ if str(ROOT) not in sys.path:
 from src.simulator import simulate_season
 from src.form      import seed_form_window, compute_form_multiplier
 from src.downloader import PL_SEASONS
-from app.app        import season_banner
+from src.ui import season_banner
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------

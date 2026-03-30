@@ -26,7 +26,7 @@ if str(ROOT) not in sys.path:
 from src.model       import predict_base_goals
 from src.form        import compute_form_multiplier, seed_form_window
 from src.downloader  import PL_SEASONS
-from app.app         import season_banner
+from src.ui import season_banner
 # ---------------------------------------------------------------------------
 # Simulation helpers
 # ---------------------------------------------------------------------------

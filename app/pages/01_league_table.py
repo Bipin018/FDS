@@ -21,7 +21,7 @@ if str(ROOT) not in sys.path:
 from src.simulator import simulate_season, build_predicted_table
 from src.model_b   import predict_base_goals_b, extract_implied_probs
 from src.model     import precompute_expected_goals
-from app.app       import season_banner
+from src.ui import season_banner
 
 # ---------------------------------------------------------------------------
 # Helpers
