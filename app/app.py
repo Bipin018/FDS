@@ -43,6 +43,8 @@ from src.model_b import (
     extract_implied_probs,
     build_model_b_dataset,
     fit_model_b,
+    detect_odds_provider,
+    ODDS_PROVIDERS,
 )
 
 # ---------------------------------------------------------------------------
@@ -172,34 +174,27 @@ def load_model_a(_data: dict) -> dict:
 @st.cache_data(show_spinner="Fitting Model B (GLM + market signal)…")
 def load_model_b(_data: dict) -> dict:
     """
-    Fit Model B on training data that includes Bet365 odds columns.
-
-    Returns
-    -------
-    dict with keys:
-        model_b   — fitted statsmodels GLM result
-        fixtures  — fixture DataFrame (same as Model A fixtures — odds used
-                    only during GLM training, not fixture pre-computation)
+    Fit Model B on training data with odds.
+    Prefers 1xBet (1XH/1XD/1XA), falls back to Bet365 (B365H/B365D/B365A).
     """
     train_df = _data["train_df"].copy()
 
-    # Only use rows that have complete odds data
-    odds_cols = ["B365H", "B365D", "B365A"]
-    if not all(c in train_df.columns for c in odds_cols):
-        # Odds not available — return None so pages can gracefully degrade
-        return dict(model_b=None, fixtures=None)
+    provider = detect_odds_provider(train_df)
+    if provider is None:
+        return dict(model_b=None, train_odds=None, odds_source=None)
 
-    train_odds = train_df.dropna(subset=odds_cols).copy()
-    train_odds = extract_implied_probs(train_odds)
+    h_col, d_col, a_col = ODDS_PROVIDERS[provider]
+
+    # Use only matches where this provider has all 3 odds
+    train_odds = train_df.dropna(subset=[h_col, d_col, a_col]).copy()
+    train_odds = extract_implied_probs(train_odds, provider=provider)
 
     model_b_df = build_model_b_dataset(train_odds)
-    model_b    = fit_model_b(model_b_df)
+    model_b = fit_model_b(model_b_df)
 
-    # Re-use Model A fixtures (mu values differ via training only)
-    # Model B fixture mu_home/mu_away are computed on-demand in pages
-    # using predict_base_goals_b with per-fixture implied_prob_home.
-    return dict(model_b=model_b, train_odds=train_odds)
+    print(f"    [Model B] Odds source: {provider} | matches with odds: {len(train_odds)}")
 
+    return dict(model_b=model_b, train_odds=train_odds, odds_source=provider)
 
 # ---------------------------------------------------------------------------
 # Bootstrap session state

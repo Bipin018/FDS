@@ -20,56 +20,57 @@ import pandas as pd
 import statsmodels.api as sm
 import statsmodels.formula.api as smf
 
-
+ODDS_PROVIDERS: dict[str, tuple[str, str, str]] = {
+    "1xbet": ("1XH", "1XD", "1XA"),
+    "bet365": ("B365H", "B365D", "B365A"),
+}
 # ---------------------------------------------------------------------------
 # Implied probability extraction
 # ---------------------------------------------------------------------------
+def detect_odds_provider(df: pd.DataFrame) -> str | None:
+    """Pick the best available provider in df. Priority: 1xBet → Bet365."""
+    for provider, (h, d, a) in ODDS_PROVIDERS.items():
+        if all(c in df.columns for c in (h, d, a)):
+            if df[[h, d, a]].dropna().shape[0] > 0:
+                return provider
+    return None
 
-def extract_implied_probs(df: pd.DataFrame) -> pd.DataFrame:
+def extract_implied_probs(df: pd.DataFrame, provider: str = "auto") -> pd.DataFrame:
     """
-    Compute fair implied probabilities from Bet365 odds, removing the
-    bookmaker overround (vig).
+    Compute fair implied probabilities from odds, removing the overround.
 
-    Raw implied probabilities
-    -------------------------
-    ::
-
-        raw_h = 1 / B365H
-        raw_d = 1 / B365D
-        raw_a = 1 / B365A
-
-    Overround removal (normalisation)
-    ----------------------------------
-    ::
-
-        overround          = raw_h + raw_d + raw_a
-        implied_prob_home  = raw_h / overround
-        implied_prob_draw  = raw_d / overround
-        implied_prob_away  = raw_a / overround
-
-    Parameters
-    ----------
-    df : pd.DataFrame
-        Match DataFrame containing ``B365H``, ``B365D``, and ``B365A``
-        columns.  Rows missing any of these columns are left with ``NaN``
-        in the output probability columns.
-
-    Returns
-    -------
-    pd.DataFrame
-        Original DataFrame with three additional columns:
-        ``implied_prob_home``, ``implied_prob_draw``, ``implied_prob_away``.
+    Supports:
+      - 1xBet:  1XH, 1XD, 1XA
+      - Bet365: B365H, B365D, B365A
     """
     df = df.copy()
-    raw_h = 1.0 / df["B365H"]
-    raw_d = 1.0 / df["B365D"]
-    raw_a = 1.0 / df["B365A"]
+
+    if provider == "auto":
+        provider = detect_odds_provider(df)
+
+    if provider is None:
+        # no odds available
+        df["implied_prob_home"] = 1 / 3
+        df["implied_prob_draw"] = 1 / 3
+        df["implied_prob_away"] = 1 / 3
+        df["odds_source"] = "none"
+        return df
+
+    if provider not in ODDS_PROVIDERS:
+        raise ValueError(f"Unknown odds provider: {provider}")
+
+    h_col, d_col, a_col = ODDS_PROVIDERS[provider]
+
+    raw_h = 1.0 / df[h_col]
+    raw_d = 1.0 / df[d_col]
+    raw_a = 1.0 / df[a_col]
     overround = raw_h + raw_d + raw_a
+
     df["implied_prob_home"] = raw_h / overround
     df["implied_prob_draw"] = raw_d / overround
     df["implied_prob_away"] = raw_a / overround
+    df["odds_source"] = provider
     return df
-
 
 # ---------------------------------------------------------------------------
 # Dataset construction

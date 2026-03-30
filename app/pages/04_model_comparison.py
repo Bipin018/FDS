@@ -57,9 +57,12 @@ def _run_model_b(_model_b, _fixtures_a: pd.DataFrame,
     fixtures_b = _fixtures_a.copy()
     mu_h_list, mu_a_list = [], []
     for _, row in fixtures_b.iterrows():
-        mh, ma = predict_base_goals_b(
-            _model_b, row["HomeTeam"], row["AwayTeam"], median_imp
-        )
+        ht = row["HomeTeam"]
+        at = row["AwayTeam"]
+        try:
+            mh, ma = predict_base_goals_b(_model_b, ht, at, median_imp)
+        except Exception:
+            mh, ma = float(row["mu_home"]), float(row["mu_away"])
         mu_h_list.append(mh)
         mu_a_list.append(ma)
     fixtures_b["mu_home"] = mu_h_list

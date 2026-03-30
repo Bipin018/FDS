@@ -60,9 +60,15 @@ def run_simulations_b(
     fixtures_b = _fixtures_a.copy()
     mu_home_b, mu_away_b = [], []
     for _, row in fixtures_b.iterrows():
-        mh, ma = predict_base_goals_b(
-            _model_b, row["HomeTeam"], row["AwayTeam"], median_imp
-        )
+        ht = row["HomeTeam"]
+        at = row["AwayTeam"]
+
+        try:
+            mh, ma = predict_base_goals_b(_model_b, ht, at, median_imp)
+        except Exception:
+            # Promoted / unseen team for Model B → fall back to Model A mu
+            mh, ma = float(row["mu_home"]), float(row["mu_away"])
+
         mu_home_b.append(mh)
         mu_away_b.append(ma)
 

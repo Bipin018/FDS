@@ -40,7 +40,13 @@ CHAMP_FALLBACK_MAP: dict[str, str] = {
 BASE_URL  = "https://www.football-data.co.uk/mmz4281/{season}/E0.csv"
 CHAMP_URL = "https://www.football-data.co.uk/mmz4281/{season}/E1.csv"
 
-KEEP_COLS: list[str] = ["Date", "HomeTeam", "AwayTeam", "FTHG", "FTAG", "FTR"]
+KEEP_COLS: list[str] = [
+    "Date", "HomeTeam", "AwayTeam", "FTHG", "FTAG", "FTR",
+    # Bet365 odds
+    "B365H", "B365D", "B365A",
+    # 1xBet odds
+    "1XH", "1XD", "1XA",
+]
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
